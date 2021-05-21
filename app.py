@@ -17,8 +17,13 @@ session = Session(engine)
 
 @app.route('/') 
 def showroutes():
-    return "hi"
-# HELP
+    return ( f"these are the available routes...<br/>"
+        f"/api/v1.0/precipitation<br/>"
+        f"/api/v1.0/stations<br/>"
+        f"/api/v1.0/tobs<br/>"
+        f"/api/v1.0/start<br/>"
+        f"/api/v1.0/start/end<br/>"
+    )
 
 @app.route('/api/v1.0/precipitation') 
 def precip():
@@ -29,7 +34,6 @@ def precip():
 @app.route('/api/v1.0/stations')
 def stations():
     new_stations = session.query(func.distinct(station.station)).all()
-    new_stations = list(new_stations)
     return jsonify(new_stations)
 
 @app.route('/api/v1.0/tobs')
@@ -40,12 +44,22 @@ def tobs():
     return jsonify(twelve_months2)
 
 @app.route('/api/v1.0/<start>')
-def start():
-    return 'hi'
+def start(start):
+    date_time = dt.datetime.strptime(start, '%Y-%m-%d')
+    year_ago2 = date_time - dt.timedelta(days=365)
+    tmin = session.query(func.min(measurement.tobs)).filter(measurement.date > year_ago2).all()
+    tmax = session.query(func.max(measurement.tobs)).filter(measurement.date > year_ago2).all()
+    tavg = session.query(func.avg(measurement.tobs)).filter(measurement.date > year_ago2).all()
+    return jsonify(f"the min was {tmin}, the max was {tmax}, and the avg was {tavg} for all dates after {date_time}")
 
 @app.route('/api/v1.0/<start>/<end>')
-def startend():
-    return 'hi'
+def startend(start, end):
+    date_time1 = dt.datetime.strptime(start, '%Y-%m-%d')
+    date_time2 = dt.datetime.strptime(end, '%Y-%m-%d')
+    tmin = session.query(func.min(measurement.tobs)).filter(measurement.date > date_time1).filter(measurement.date < date_time2).all()
+    tmax = session.query(func.max(measurement.tobs)).filter(measurement.date > date_time1).filter(measurement.date < date_time2).all()
+    tavg = session.query(func.avg(measurement.tobs)).filter(measurement.date > date_time1).filter(measurement.date < date_time2).all()
+    return jsonify(f"the min was {tmin}, the max was {tmax}, and the avg was {tavg} for all dates between {date_time1} and {date_time2}")
 
 if __name__ == "__main__":
     app.run(debug=True)
